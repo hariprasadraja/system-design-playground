@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hari's Grocery · The First Empty Bitmap Position</title>
+<style>
+  :root{color-scheme:light;--ink:#17313b;--muted:#526770;--paper:#f5f4ed;--card:#fff;--line:#d8dfdb;--teal:#076b62;--gold:#995600;--soft:#e4f2ed}
+  *{box-sizing:border-box}body{margin:0;font:16px/1.65 system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+  header{padding:3rem max(1.2rem,calc((100vw - 1120px)/2));background:var(--ink);color:white}
+  header p{max-width:820px;color:#d7e9e4}h1{font-size:clamp(2rem,5vw,3.6rem);line-height:1.15;margin:.6rem 0}h2{line-height:1.25;font-size:1.7rem}h3{margin-top:1.5rem}
+  .eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.78rem;font-weight:700}
+  nav{display:flex;flex-wrap:wrap;gap:.6rem;padding:1rem max(1.2rem,calc((100vw - 1120px)/2));background:#e5ece7;border-bottom:1px solid var(--line)}
+  nav a{text-decoration:none;padding:.35rem .65rem;background:white;border:1px solid var(--line);border-radius:5px}
+  main{max-width:1160px;margin:auto;padding:1.2rem}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:clamp(1rem,3vw,2rem);margin:1.3rem 0;scroll-margin-top:1rem}
+  .number{color:var(--teal);font-weight:800}
+  .intro{max-width:860px;color:var(--muted)}
+  code,pre,.mono{font-family:ui-monospace,Consolas,monospace}code{background:#edf2ee;padding:.1rem .25rem;border-radius:3px}
+  pre{padding:1rem;background:#eff3ef;overflow:auto;font-size:.9rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+  .story{background:#fafbf8;border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem;margin:1rem 0}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.6rem 0}
+  th,td{text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#edf2ee}
+  .chart{width:100%;height:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+  .controls{display:flex;align-items:end;flex-wrap:wrap;gap:.8rem;margin:1rem 0}
+  label{display:flex;flex-direction:column;font-size:.9rem;font-weight:600;gap:.25rem}
+  input,select,button{font:inherit;border:1px solid #9fafa9;border-radius:5px;padding:.5rem .7rem}
+  input[type=number]{width:125px}input[type=checkbox]{accent-color:var(--teal)}
+  button{background:var(--teal);color:white;border-color:var(--teal);cursor:pointer;font-weight:650}
+  button.secondary{background:#fff;color:var(--teal)}
+  .note{background:var(--soft);border-left:4px solid var(--teal);padding:.8rem 1rem;margin:1rem 0}
+  .warning{background:#fff2d7;border-color:var(--gold)}
+  .big{font-size:2rem;line-height:1.2}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem}
+  footer{padding:2rem;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">One store · the first empty bitmap position</div>
+  <h1>The first empty box<br>is the answer.</h1>
+  <p>Each customer leaves a mark on a bitmap. We scan from the bottom up and stop at the first empty box. That box is R, and 2^R is our guess at how many customers visited.</p>
+  <a href="07-fm-pcsa-story.md">Read the complete story & derivations</a>
+</header>
+<nav aria-label="Sections">
+  <a href="#update">1 · The update rule</a>
+  <a href="#example">2 · Complete example</a>
+  <a href="#why">3 · Why the first empty box?</a>
+  <a href="#prob">4 · The evidence</a>
+  <a href="#est">5 · From R to the estimate</a>
+</nav>
+<main>
+  <section id="update">
+    <div class="number">SECTION 1 · THE UPDATE RULE</div>
+    <h2>One bitmap, one mark per customer</h2>
+    <div class="story">
+      <p>Hash each customer. Count the zeros from the right until you reach a <code>1</code>. That count is the customer's <strong>position</strong>. Put a mark in that position.</p>
+      <p>A returning customer repeats the same hash, so it marks the same position again. Nothing changes.</p>
+    </div>
+    <pre>hash(customer)  →  count trailing zeros  →  bitmap[position] = 1</pre>
+  </section>
+
+  <section id="example">
+    <div class="number">SECTION 2 · COMPLETE EXAMPLE</div>
+    <h2>The bitmap that starts the confusion</h2>
+    <p class="intro">Eight customers. Made-up hashes chosen so we can see the boxes clearly.</p>
+    <table>
+      <thead><tr><th>Customer</th><th>Hash</th><th>Position marked</th></tr></thead>
+      <tbody>
+        <tr><td>C00001</td><td><code>10100101</code></td><td>0</td></tr>
+        <tr><td>C00002</td><td><code>11001010</code></td><td>1</td></tr>
+        <tr><td>C00003</td><td><code>01101000</code></td><td>3</td></tr>
+        <tr><td>C00004</td><td><code>01000000</code></td><td>6</td></tr>
+        <tr><td>C00005</td><td><code>00110101</code></td><td>0</td></tr>
+        <tr><td>C00006</td><td><code>10110110</code></td><td>1</td></tr>
+        <tr><td>C00007</td><td><code>11101001</code></td><td>0</td></tr>
+        <tr><td>C00008</td><td><code>00111000</code></td><td>3</td></tr>
+      </tbody>
+    </table>
+    <p>Final bitmap, boxes 0–6:</p>
+    <pre>Position:  0 1 2 3 4 5 6
+Bitmap:    1 1 0 1 0 0 1</pre>
+    <div class="note">The first empty box, scanning left to right, is position <span class="number">2</span>.</div>
+    <p>So <strong>R = 2</strong>.</p>
+    <p>Estimate = <span class="mono">2^2 / φ</span> ≈ <span class="number">5.17</span>. The real number of customers was <strong>8</strong>. One bitmap is noisy — that is expected.</p>
+  </section>
+
+  <section id="why">
+    <div class="number">SECTION 3 · WHY THE FIRST EMPTY BOX?</div>
+    <h2>It finds the most common missing pattern</h2>
+    <p class="intro">Boxes fill by rarity. Position 0 is common, position 1 rarer, position 2 rarer still, and so on.</p>
+    <pre>Position 0: about 1 in 2 customers marks it.
+Position 1: about 1 in 4 customers marks it.
+Position 2: about 1 in 8 customers marks it.
+Position 3: about 1 in 16 customers marks it.</pre>
+    <p>The first empty box is the first common pattern that is missing. Missing a pattern that should be common is strong evidence the customer count is small.</p>
+  </section>
+
+  <section id="prob">
+    <div class="number">SECTION 4 · THE EVIDENCE</div>
+    <h2>How likely is the first empty box at position 2?</h2>
+    <p class="intro">For each actual customer count, how often does the first empty position land on 2?</p>
+    <div class="controls">
+      <label>Customers n<input id="nSlider" type="number" min="1" max="64" value="8"></label>
+      <button id="probRun">Show distribution</button>
+    </div>
+    <div id="probChart"></div>
+    <table id="probTable">
+      <thead><tr><th>Actual customers n</th><th>P(first empty position = 2)</th></tr></thead>
+      <tbody>
+        <tr data-n="2"><td>2</td><td>25.00%</td></tr>
+        <tr data-n="4"><td>4</td><td>41.41%</td></tr>
+        <tr data-n="8"><td>8</td><td>31.99%</td></tr>
+        <tr data-n="16"><td>16</td><td>11.75%</td></tr>
+        <tr data-n="32"><td>32</td><td>1.39%</td></tr>
+        <tr data-n="64"><td>64</td><td>0.0194%</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="est">
+    <div class="number">SECTION 5 · FROM R TO THE ESTIMATE</div>
+    <h2>2^R, and why many bitmaps are averaged</h2>
+    <div class="grid">
+      <div>
+        <h3>One bitmap</h3>
+        <pre>estimate = 2^R / φ</pre>
+        <p>R = 2 → <span class="mono">2^2 / 0.77351</span> ≈ <strong>5.17</strong>.</p>
+      </div>
+      <div>
+        <h3>Many bitmaps</h3>
+        <p>Each observer gets a different hash, so different first-empty positions.</p>
+        <pre>Observers:  2   3   4
+Average:     3
+Estimate:   2^3 / φ ≈ 10.34</pre>
+        <p>The final paper method uses stable partitioning and a factor of m.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="theorem">
+    <div class="number">SECTION 6 · THEOREM 3.A · PP. 193–195</div>
+    <h2>What is the “magic” constant φ?</h2>
+    <p class="intro">Theorem 3.A is the paper's theorem that produces the constant φ ≈ 0.77351 — the number we divide by in <span class="mono">2^R / φ</span>.</p>
+    <p><strong>The plain version:</strong> the paper proved that the average rank R from one bitmap comes out to about <strong>log₂(n) − 0.3705</strong>. Hari's estimate <span class="mono">2^R</span> is therefore systematically a little low. Dividing by φ ≈ 0.77351 stretches it back toward the right customer count.</p>
+    <pre>φ = (e^γ / sqrt(2)) × (2/3)
+    × product over j = 1, 2, … of
+      [ ((4j+1)(4j+2)) / ((4j)(4j+3)) ]^((-1)^popcount(j))
+
+γ ≈ 0.5772156649   (Euler's constant)
+Even popcount: multiply. Odd popcount: divide.</pre>
+    <p>The first few factors are:</p>
+    <pre>j=1, binary 1:   divide by 30/28
+j=2, binary 10:  divide by 90/88
+j=3, binary 11:  multiply by 182/180</pre>
+    <p>Evaluating progressively converges to φ ≈ 0.773516.</p>
+    <details><summary>The bridge from probability to product</summary>
+      <p>1. Inclusion–exclusion gives the exact distribution of R.<br>
+      2. A smooth approximation gives the expected rank as a sum over scales n/2, n/4, n/8, …<br>
+      3. A Mellin transform reorganises those scales.<br>
+      4. The main term extracted is log₂n + (γ + N′(0))/ln2 − 1/2.<br>
+      5. From that: ln φ = γ + N′(0) − ln2/2.<br>
+      6. Grouping terms four at a time gives the product.</p>
+    </details>
+  </section>
+  <section id="second">
+    <div class="number">BONUS · WHERE THE FIRST EMPTY BOX LIKELY IS</div>
+    <h2>Most likely first-empty position vs customer count</h2>
+    <p class="intro">Across the same hash model, which first-empty position is most likely for each customer count?</p>
+    <div id="secondChart"></div>
+  </section>
+</main>
+<footer>Offline learning aid. Synthetic hashes for teaching only. Source: Flajolet &amp; Martin, "Counting Distinct Values via the Flajolet–Martin Algorithm", journal of discrete math.</footer>
+
+<script>
+  const PHI = 0.773516290951;
+  function probFirstZeroAt(n, k){
+    // P(first empty position == k)
+    let p = 1;
+    for (let j = 0; j < k; j++){
+      const pj = Math.pow(0.5, j + 1);
+      p *= (1 - Math.pow(1 - pj, n));
+    }
+    const pk = Math.pow(0.5, k + 1);
+    p *= Math.pow(1 - pk, n);
+    return p;
+  }
+  function estimateFromR(R){ return Math.pow(2, R) / PHI; }
+  function buildChart(){
+    const svg = document.getElementById('probChart');
+    const n = Math.max(1, parseInt(document.getElementById('nSlider').value, 10) || 8);
+    const W = 900, H = 380, m = {t: 20, r: 20, b: 40, l: 50};
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const maxK = 8;
+    const maxP = 0.45;
+    let html = `<rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#d8dfdb"/>`;
+    html += `<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t + ih}" stroke="#17313b"/>`;
+    html += `<line x1="${m.l}" y1="${m.t + ih}" x2="${m.l + iw}" y2="${m.t + ih}" stroke="#17313b"/>`;
+    for (let g = 0; g <= 4; g++){
+      const y = m.t + ih - (ih * g) / 4;
+      html += `<line x1="${m.l}" y1="${y}" x2="${m.l + iw}" y2="${y}" stroke="#e6ece9" stroke-width="1"/>`;
+      html += `<text x="${m.l - 8}" y="${y + 4}" font-size="11" text-anchor="end" fill="#526770">${((1 - g / 4) * maxP).toFixed(3)}</text>`;
+    }
+    const step = iw / (maxK + 1);
+    const bw = Math.min(46, step * 0.6);
+    let bars = '';
+    for (let k = 0; k <= maxK; k++){
+      const p = probFirstZeroAt(n, k);
+      const h = (p / maxP) * ih;
+      const x = m.l + step * (k + 0.5) - bw / 2;
+      const y = m.t + ih - h;
+      bars += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="#076b62" rx="2"/>`;
+      bars += `<text x="${x + bw / 2}" y="${m.t + ih + 16}" font-size="11" text-anchor="middle" fill="#526770">k=${k}</text>`;
+      bars += `<text x="${x + bw / 2}" y="${y - 5}" font-size="11" text-anchor="middle" fill="#17313b">${p.toExponential(2)}</text>`;
+    }
+    html += bars;
+    html += `<text x="${m.l + iw / 2}" y="20" font-size="13" text-anchor="middle" fill="#17313b">P(first empty position = k) for n = ${n} distinct customers</text>`;
+    svg.innerHTML = html;
+  }
+  function buildSecond(){
+    const svg = document.getElementById('secondChart');
+    const data = [[2,1],[4,2],[8,3],[16,4],[32,5],[64,6]];
+    const W = 900, H = 300, m = {t: 40, r: 20, b: 40, l: 50};
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const maxK = 8;
+    let html = `<rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#d8dfdb"/>`;
+    html += `<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t + ih}" stroke="#17313b"/>`;
+    html += `<line x1="${m.l}" y1="${m.t + ih}" x2="${m.l + iw}" y2="${m.t + ih}" stroke="#17313b"/>`;
+    const step = iw / (maxK + 1);
+    const bw = Math.min(46, step * 0.6);
+    for (const [n, k] of data){
+      const h = (k / maxK) * ih;
+      const x = m.l + step * (n + 0.5) - bw / 2;
+      const y = m.t + ih - h;
+      html += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="#995600" rx="2"/>`;
+      html += `<text x="${x + bw / 2}" y="${m.t + ih + 16}" font-size="11" text-anchor="middle" fill="#526770">n=${n}</text>`;
+      html += `<text x="${x + bw / 2}" y="${y - 5}" font-size="11" text-anchor="middle" fill="#17313b">k=${k}</text>`;
+    }
+    svg.innerHTML = html;
+    svg.insertAdjacentHTML('beforeend', `<text x="${m.l + iw / 2}" y="20" font-size="13" text-anchor="middle" fill="#17313b">Most likely first empty position by customer count</text>`);
+  }
+  document.getElementById('probRun').addEventListener('click', buildChart);
+  document.getElementById('nSlider').addEventListener('input', buildChart);
+  window.addEventListener('load', function(){ buildChart(); buildSecond(); });
+</script>
+</body>
+</html>
+

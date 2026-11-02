@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FM vs LogLog vs HLL · comparative study</title>
+<style>
+  :root{--bg:#0f1220;--card:#1a1e33;--card2:#222842;--ink:#eef1ff;--mut:#9aa3c7;--fm:#ff6b81;--ll:#ffb84d;--hll:#3ddc97;--actual:#5eb1ff;--line:#30365c}
+  *{box-sizing:border-box}body{margin:0;font:16px/1.65 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:22px 28px 6px}h1{margin:0;font-size:26px}h2{font-size:18px;margin:0 0 10px}.sub{color:var(--mut);max-width:900px;line-height:1.5}
+  main{padding:16px 28px 40px;display:grid;gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  label{color:var(--mut);font-size:13px;display:block;margin-bottom:6px}
+  input[type=number],select{background:var(--card2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+  button{background:var(--hll);color:#06281a;border:0;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer}
+  .big{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mono{font-family:ui-monospace,Consolas,monospace}.mut{color:var(--mut)}.small{font-size:13px;line-height:1.5}
+  .fm{color:var(--fm)}.ll{color:var(--ll)}.hll{color:var(--hll)}.act{color:var(--actual)}
+  pre{padding:1rem;background:#10132a;border:1px solid var(--line);border-radius:10px;overflow:auto;font-size:.9rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+  .note{border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:12px 14px;margin:12px 0}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--mut)}
+  .bar{height:14px;background:#10132a;border-radius:7px;overflow:hidden;margin:8px 0}.bar>i{display:block;height:100%;width:0;border-radius:7px;transition:width .45s}
+  footer{padding:2rem;text-align:center;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Comparative study · all three</div>
+  <h1>FM vs LogLog vs HyperLogLog</h1>
+  <p class="sub">Same hashes, same customer counts. Three estimators, one question: how close is each to the true distinct count? Errors and performance compared.</p>
+</header>
+<main>
+  <section class="card">
+    <div class="number" style="color:var(--fm);font-weight:800">SECTION 1 · THE THREE ESTIMATORS</div>
+    <h2>Side by side</h2>
+    <div class="grid2">
+      <div>
+        <h3 class="fm">Flajolet–Martin (FM)</h3>
+        <pre>Bitmap: first empty rank R → estimate = 2^R / φ
+φ ≈ 0.77351   (Theorem 3.A product)</pre>
+      </div>
+      <div>
+        <h3 class="ll">LogLog</h3>
+        <pre>Registers: bucket = top(log2 m) bits → max rank
+estimate = α · m · 2^(mean register)
+α ≈ 0.39701</pre>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <h3 class="hll">HyperLogLog (HLL)</h3>
+        <pre>Registers: bucket = top(log2 m) bits → max rank
+estimate = α_m · m² / Σ 2^(−R_j)
+α_m ≈ 0.709 for m = 64; linear counting for small n</pre>
+      </div>
+      <div>
+        <h3 class="act">The truth</h3>
+        <pre>estimate error = |estimate − actual n| / actual n</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="error">
+    <div class="number" style="color:var(--fm);font-weight:800">SECTION 2 · ERROR STUDY</div>
+    <h2>Error vs the actual customer count</h2>
+    <table id="errTable">
+      <thead><tr><th>Actual n</th><th>FM error</th><th>LogLog error</th><th>HLL error</th></tr></thead>
+      <tbody>
+        <tr><td>1,000</td><td class="mut">—</td><td class="ll">+124.97%</td><td class="hll">−0.67%</td></tr>
+        <tr><td>10,000</td><td class="fm">≈9.75%</td><td class="mut">—</td><td class="mut">—</td></tr>
+        <tr><td>100,000</td><td class="mut">—</td><td class="ll">+0.54%</td><td class="hll">+1.69%</td></tr>
+        <tr><td>1,000,000</td><td class="mut">—</td><td class="ll">+0.07%</td><td class="hll">+0.32%</td></tr>
+      </tbody>
+    </table>
+    <div id="chart"></div>
+    <p class="small mut">Error = |estimate − actual n| / actual n. FM from the lesson (n=10,000, m=64, SD ≈ 975 ≈ 9.75%). LogLog/HLL from the verified runs in scripts/ + playground. Small n: LogLog raw has no small-range fix; HLL adds linear counting.</p>
+  </section>
+
+  <section class="card" id="perf">
+    <div class="number" style="color:var(--fm);font-weight:800">SECTION 3 · PERFORMANCE</div>
+    <h2>Work per item and memory</h2>
+    <table>
+      <thead><tr><th>Algorithm</th><th>Hashes / item</th><th>Memory</th><th>Small-n handling</th><th>Theory error</th></tr></thead>
+      <tbody>
+        <tr><td class="fm">FM</td><td>1 (then m-observer average)</td><td>m bitmaps × L bits</td><td>saturation risk</td><td>≈0.78/√m</td></tr>
+        <tr><td class="ll">LogLog</td><td>1</td><td>m registers</td><td>no small-range fix (raw)</td><td>≈0.78/√m (geometric)</td></tr>
+        <tr><td class="hll">HyperLogLog</td><td>1</td><td>m registers (~m bytes)</td><td>linear counting</td><td>≈1.04/√m</td></tr>
+      </tbody>
+    </table>
+    <p class="small mut">FM pays m hashes per item when using direct averaging; PCSA gets the same accuracy with 1 hash. LogLog and HLL use 1 hash. HLL adds linear counting and α_m.</p>
+  </section>
+
+  <section class="card" id="bias">
+    <div class="number" style="color:var(--fm);font-weight:800">SECTION 4 · BIAS CONSTANTS</div>
+    <h2>φ, α, α_m — each from its own theory</h2>
+    <table>
+      <thead><tr><th>Algorithm</th><th>Constant</th><th>Value</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td class="fm">FM</td><td>φ</td><td>0.77351</td><td>Theorem 3.A product</td></tr>
+        <tr><td class="ll">LogLog</td><td>α</td><td>0.39701</td><td>Asymptotic analysis</td></tr>
+        <tr><td class="hll">HLL</td><td>α_m</td><td>0.709 (m=64)…</td><td>Asymptotic + linear counting</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+<footer>Offline comparative study. Sources: scripts/01-04, playground/, notes/, 06-hyperloglog-playground.html.</footer>
+
+<script>
+  function drawChart(){
+    const svg=document.getElementById('chart'); const W=900,H=340,mx={t:20,r:20,b:40,l:60},iw=W-mx.l-mx.r,ih=H-mx.t-mx.b;
+    const rows=[['1,000',0],['10,000',9.75],['100,000',0],['1,000,000',0]];
+    const data=[['LogLog',124.97],['HLL',-0.67],['FM',9.75]];
+    let h=`<rect x="0" y="0" width="${W}" height="${H}" fill="#1a1e33" stroke="#30365c"/>`;
+    h+=`<line x1="${mx.l}" y1="${mx.t}" x2="${mx.l}" y2="${mx.t+ih}" stroke="#30365c"/><line x1="${mx.l}" y1="${mx.t+ih}" x2="${mx.l+iw}" y2="${mx.t+ih}" stroke="#30365c"/>`;
+    const maxV=150, iw2=iw;
+    // simple grouped bars per algorithm
+    const groups=['LogLog','HLL'];
+    const Wd=iw2/3, bw=Wd*0.55;
+    for(let g=0;g<groups.length;g++){
+      const name=groups[g], vals=data.filter(d=>d[0]===name).map(d=>d[1]);
+      // just draw one bar per algorithm at its representative n for clarity
+    }
+    // Simpler: bar per algorithm at the first non-null error
+    const reps=[['FM',9.75,'#ff6b81'],['LogLog',124.97,'#ffb84d'],['HLL',-0.67,'#3ddc97']];
+    const maxAbs=Math.max(...reps.map(r=>Math.abs(r[1])))*1.2;
+    for(let i=0;i<reps.length;i++){const [name,e,color]=reps[i];
+      const bh=(Math.abs(e)/maxAbs)*ih; const x=mx.l+i*(iw/3)+((iw/3)-bw)/2; const y=mx.t+ih-(Math.abs(e)/maxAbs)*ih;
+      h+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${color}" rx="2"/>`;
+      h+=`<text x="${x+bw/2}" y="${mx.t+ih+16}" font-size="11" text-anchor="middle" fill="#9aa3c7">${name}</text>`;
+      h+=`<text x="${x+bw/2}" y="${y-5}" font-size="11" text-anchor="middle" fill="#eef1ff">${e}%</text>`;}
+    h+=`<text x="${mx.l+iw/3}" y="18" font-size="13" text-anchor="middle" fill="#eef1ff">Error % by algorithm (representative runs)</text>`;
+    document.getElementById('chart').innerHTML=h;
+  }
+  window.addEventListener('load',drawChart);
+</script>
+</body>
+</html>

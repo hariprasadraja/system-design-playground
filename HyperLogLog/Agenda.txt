@@ -1,0 +1,24 @@
+# HyperLogLog Presentation 
+
+## Agenda 
+
+1. Introduction Plot - 2 mins 
+Hari owns **Hari's Grocery**. Customers sometimes return several times. Two checkout machines record receipts. Hari wants **how many different customers visited**, using very little memory.
+
+2. Problem: Why Hashing is in-efficient - 2 mins 
+
+- underterministic input will have underterminsitic hash size 
+
+3.  Probablistic Data Structure - Fajolet Martin Algoritham
+  3.1 Simple Bit Map Implementation
+    - Explain about Bitmask [HyperLogLog\09-fm-pcsa-first-zero.html](HyperLogLog\09-fm-pcsa-first-zero.html)
+    - How the value of sig can be used to estimate the number of unique customers
+  3.2 Playground 
+    3.2 Multiple Bit Map Implementation 
+  3.3 PCSA Implementation (Probabilistic Counting with Stochastic Averaging)
+      
+4. LogLog Implementation 
+    - explain about how buckets are determined by hash prefix  
+    - it favous distributed systems as it can be easily merged by taking the max of each bucket 
+    -
+5. HyperLogLog Implementation

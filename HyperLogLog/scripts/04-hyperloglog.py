@@ -81,7 +81,11 @@ class HyperLogLog:
 
     def add_hash(self, hash64: int) -> None:
         """Update the sketch from an already-computed 64-bit hash."""
+
+        """Trim the hash into 64 bits"""
         hash64 &= MASK64
+
+
         index, rank = self._index_and_rank(hash64)
         if rank > self.registers[index]:
             self.registers[index] = rank
@@ -246,10 +250,10 @@ def main() -> None:
     print("HyperLogLog verification")
     print("=" * 52)
     check_tiny_example()
-    # check_duplicates()
-    # check_merge()
-    # check_small_range()
-    # accuracy_benchmark()
+    check_duplicates()
+    check_merge()
+    check_small_range()
+    accuracy_benchmark()
 
     print("\nExample memory footprint:")
     for p in (10, 12, 14, 16):

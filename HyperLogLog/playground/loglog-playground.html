@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LogLog · the geometric mean</title>
+<style>
+  :root{--bg:#0f1220;--card:#1a1e33;--card2:#222842;--ink:#eef1ff;--mut:#9aa3c7;--ll:#ffb84d;--actual:#5eb1ff;--line:#30365c}
+  *{box-sizing:border-box}body{margin:0;font:16px/1.65 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:22px 28px 6px}h1{margin:0;font-size:26px}h2{font-size:18px;margin:0 0 10px}.sub{color:var(--mut);max-width:900px;line-height:1.5}
+  main{padding:16px 28px 40px;display:grid;gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  label{color:var(--mut);font-size:13px;display:block;margin-bottom:6px}
+  input[type=number],select{background:var(--card2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+  button{background:var(--ll);color:#231a02;border:0;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer}
+  .big{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mono{font-family:ui-monospace,Consolas,monospace}.mut{color:var(--mut)}.small{font-size:13px;line-height:1.5}
+  .ll{color:var(--ll)}.act{color:var(--actual)}
+  pre{padding:1rem;background:#10132a;border:1px solid var(--line);border-radius:10px;overflow:auto;font-size:.9rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+  .note{border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:12px 14px;margin:12px 0}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--mut)}
+  .bar{height:14px;background:#10132a;border-radius:7px;overflow:hidden;margin:8px 0}.bar>i{display:block;height:100%;width:0;border-radius:7px;transition:width .45s}
+  canvas{width:100%;height:240px;background:#10132a;border-radius:10px}
+  footer{padding:2rem;text-align:center;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">LogLog · learning aid</div>
+  <h1>LogLog — the geometric mean</h1>
+  <p class="sub">One bucket per item. Each bucket remembers its largest rank. The estimate is <span class="mono">α · m · 2^(mean register)</span>, and <span class="mono">α ≈ 0.39701</span> is the bias constant from the asymptotic analysis.</p>
+</header>
+<main>
+  <section class="card">
+    <div class="number" style="color:var(--ll);font-weight:800">SECTION 1 · THE UPDATE RULE</div>
+    <h2>One bucket per item</h2>
+    <p>For each item: hash → take the top <span class="mono">log2(m)</span> bits as bucket → write the max rank into that bucket.</p>
+    <pre>hash → bucket = top(log2(m)) bits → register[bucket] = max(register[bucket], rank) → estimate = α · m · 2^(mean(register))</pre>
+    <p class="note">In the educational implementation (<code>scripts/03-loglog.py</code>): bucket id from the top k bits, rank from leading zeros, register = max.</p>
+  </section>
+
+  <section class="card" id="formula">
+    <div class="number" style="color:var(--ll);font-weight:800">SECTION 2 · THE ESTIMATE</div>
+    <h2>estimate = α · m · 2^(mean register)</h2>
+    <p>For every register equal to <span class="mono">r</span>, the estimate is simply:</p>
+    <pre>estimate = α · m · 2^r</pre>
+    <div class="controls" style="margin-top:12px">
+      <label>Register r = <b id="rVal" style="color:var(--ll)">5</b></label>
+      <label>m = <b id="mVal" style="color:var(--ll)">64</b></label>
+      <button id="go">Compute estimate</button>
+    </div>
+    <pre id="out">estimate = 0.39701 × 64 × 2^5 = 8128.13</pre>
+    <p class="small mut">α ≈ 0.39701 is the LogLog bias constant. It is the asymptotic constant from the theory — not fitted to a dataset.</p>
+    <div id="chart"></div>
+  </section>
+
+  <section class="card" id="alpha">
+    <div class="number" style="color:var(--ll);font-weight:800">SECTION 3 · WHERE THE BIAS CONSTANT COMES FROM</div>
+    <h2>α ≈ 0.39701 — derived, not guessed</h2>
+    <p>The estimate formula has an asymptotic constant α. For FM that constant came out as φ ≈ 0.77351 via <b>Theorem 3.A</b> (the product from the probability analysis). For LogLog the same kind of asymptotic analysis produces α ≈ 0.39701.</p>
+    <p class="note">The mathematical route is parallel: exact distribution of the max → smooth approximation → Mellin-type transform → constant. The paper's Theorem 3.A gives the φ product; LogLog's derivation gives the α constant. Same family, different estimator shape.</p>
+    <p class="small">Relation to your code: <code>LogLog.alpha = 0.39701</code>, estimate = <code>alpha * m * (2 ** avg_register)</code>, then rounded.</p>
+  </section>
+</main>
+<footer>Offline LogLog learning aid. Source: scripts/03-loglog.py, 06-hyperloglog-playground.html.</footer>
+
+<script>
+  const ALPHA = 0.39701;
+  function estimate(r, m) { return ALPHA * m * Math.pow(2, r); }
+  function drawChart() {
+    const svg = document.getElementById('chart');
+    const W = 900, H = 340, mx = {t:20, r:20, b:40, l:60}, iw = W - mx.l - mx.r, ih = H - mx.t - mx.b;
+    const rmax = 12, maxE = estimate(rmax, 64) * 1.1;
+    let h = `<rect x="0" y="0" width="${W}" height="${H}" fill="#1a1e33" stroke="#30365c"/>`;
+    h += `<line x1="${mx.l}" y1="${mx.t}" x2="${mx.l}" y2="${mx.t+ih}" stroke="#30365c"/><line x1="${mx.l}" y1="${mx.t+ih}" x2="${mx.l+iw}" y2="${mx.t+ih}" stroke="#30365c"/>`;
+    for (let g = 0; g <= 4; g++) { const y = mx.t + ih - (ih*g)/4; h += `<line x1="${mx.l}" y1="${y}" x2="${mx.l+iw}" y2="${y}" stroke="#222842"/><text x="${mx.l-8}" y="${y+4}" font-size="11" text-anchor="end" fill="#9aa3c7">${(maxE*(1-g/4)).toExponential(2)}</text>`; }
+    const step = iw/(rmax+1), bw = Math.min(46, step*0.6);
+    for (let r = 0; r <= rmax; r++) { const e = estimate(r, 64), hg = (e/maxE)*ih, x = mx.l + step*(r+0.5) - bw/2, y = mx.t + ih - hg;
+      h += `<rect x="${x}" y="${y}" width="${bw}" height="${hg}" fill="#ffb84d" rx="2"/>`;
+      h += `<text x="${x+bw/2}" y="${mx.t+ih+16}" font-size="11" text-anchor="middle" fill="#9aa3c7">r=${r}</text>`;
+      h += `<text x="${x+bw/2}" y="${y-5}" font-size="11" text-anchor="middle" fill="#eef1ff">${e.toExponential(2)}</text>`; }
+    h += `<text x="${mx.l+iw/2}" y="18" font-size="13" text-anchor="middle" fill="#eef1ff">LogLog estimate = α · m · 2^r   (m = 64, α = 0.39701)</text>`;
+    document.getElementById('chart').innerHTML = h;
+  }
+  document.getElementById('go').addEventListener('click', () => {
+    const r = +document.getElementById('rVal').value, m = +document.getElementById('mVal').value;
+    document.getElementById('out').textContent = `estimate = ${ALPHA} × ${m} × 2^${r} = ${estimate(r, m).toFixed(2)}`;
+  });
+  document.getElementById('rVal').addEventListener('input', () => {
+    const r = +document.getElementById('rVal').value, m = +document.getElementById('mVal').value;
+    document.getElementById('out').textContent = `estimate = ${ALPHA} × ${m} × 2^${r} = ${estimate(r, m).toFixed(2)}`;
+  });
+  document.getElementById('mVal').addEventListener('input', () => {
+    const r = +document.getElementById('rVal').value, m = +document.getElementById('mVal').value;
+    document.getElementById('out').textContent = `estimate = ${ALPHA} × ${m} × 2^${r} = ${estimate(r, m).toFixed(2)}`;
+  });
+  window.addEventListener('load', drawChart);
+</script>
+</body>
+</html>

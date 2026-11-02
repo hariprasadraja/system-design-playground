@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hari's Grocery · FM & PCSA laboratory</title>
+  <style>
+    :root{color-scheme:light;--ink:#17313b;--muted:#526770;--paper:#f5f4ed;--card:#fff;--line:#d8dfdb;--teal:#076b62;--gold:#995600;--soft:#e4f2ed;--warn:#fff2d7}
+    *{box-sizing:border-box}body{margin:0;font:16px/1.65 system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+    header{padding:3rem max(1.2rem,calc((100vw - 1120px)/2));background:var(--ink);color:white}header p{max-width:780px;color:#d7e9e4}h1{font-size:clamp(2rem,5vw,3.6rem);line-height:1.15;margin:.6rem 0}h2{line-height:1.25;font-size:1.7rem}h3{margin-top:1.5rem}a{color:var(--teal)}header a{color:#aee7ce}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.78rem;font-weight:700}
+    nav{display:flex;flex-wrap:wrap;gap:.6rem;padding:1rem max(1.2rem,calc((100vw - 1120px)/2));background:#e5ece7;border-bottom:1px solid var(--line)}nav a{text-decoration:none;padding:.35rem .65rem;background:white;border:1px solid var(--line);border-radius:5px}
+    main{max-width:1160px;margin:auto;padding:1.2rem}section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:clamp(1rem,3vw,2rem);margin:1.3rem 0;scroll-margin-top:1rem}.number{color:var(--teal);font-weight:800}.intro{max-width:850px;color:var(--muted)}
+    .controls{display:flex;align-items:end;flex-wrap:wrap;gap:.8rem;margin:1rem 0}label{display:flex;flex-direction:column;font-size:.9rem;font-weight:600;gap:.25rem}label.check{flex-direction:row;align-items:center;gap:.4rem;align-self:center}input,select,button{font:inherit;border:1px solid #9fafa9;border-radius:5px;padding:.5rem .7rem}input[type=number]{width:125px}input[type=checkbox]{accent-color:var(--teal)}button{background:var(--teal);color:white;border-color:var(--teal);cursor:pointer;font-weight:650}button.secondary{background:#fff;color:var(--teal)}button:hover{filter:brightness(.92)}button:disabled{opacity:.5;cursor:default}:focus-visible{outline:3px solid #c57a00;outline-offset:3px}
+    .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin:1rem 0}.metric{border:1px solid var(--line);padding:.8rem 1rem;border-radius:6px;background:#fafbf8}.metric strong{display:block;font-size:1.55rem;line-height:1.4}.metric span{color:var(--muted);font-size:.85rem}.note,.predict{padding:.8rem 1rem;background:var(--soft);border-left:4px solid var(--teal);margin:1rem 0}.warning{background:var(--warn);border-color:var(--gold)}
+    code,pre,.mono{font-family:ui-monospace,Consolas,monospace}code{background:#edf2ee;padding:.1rem .25rem;border-radius:3px}pre{padding:1rem;background:#eff3ef;overflow:auto;font-size:.9rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.scroll{overflow:auto}.bitmap{display:flex;gap:3px;margin:.7rem 0;min-width:max-content}.cell{display:flex;flex-direction:column;align-items:center;width:34px;border:1px solid var(--line);background:#f0f2ef;border-radius:4px;font-family:Consolas,monospace}.cell small{font-size:.7rem;color:var(--muted)}.cell b{font-size:1.15rem}.cell.set{background:#cdeadd}.cell.first{outline:3px solid #b16800;outline-offset:0}.cell.last{border-bottom:4px solid #394cb1}
+    table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.6rem 0}th,td{text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}th{background:#edf2ee;white-space:nowrap}tbody tr.active{background:#e4f2ed}.bar{display:inline-block;background:var(--teal);height:12px;vertical-align:middle;min-width:0}.bar.approx{background:#b56a11}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem}details{border:1px solid var(--line);border-radius:5px;padding:.6rem 1rem;margin:.8rem 0}summary{cursor:pointer;font-weight:650}.small{font-size:.85rem;color:var(--muted)}.status{min-height:1.6rem;font-weight:600}footer{padding:2rem;text-align:center;color:var(--muted)}[hidden]{display:none!important}
+    @media(max-width:650px){.grid{grid-template-columns:1fr}header{padding:2rem 1.2rem}th,td{padding:.4rem}section{padding:1rem}.cell{width:29px}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">One store · six experiments · the 1985 paper</div>
+  <h1>How many customers<br>visited Hari's Grocery?</h1>
+  <p>Receipts repeat. Customers return. A tiny bitmap keeps evidence of rarity, and PCSA turns many noisy bitmap readings into a useful estimate.</p>
+  <a href="07-fm-pcsa-story.md">Read the complete story & derivations</a> · <a href="Faljolet-Martin%20Algorithm.pdf">Original paper</a>
+</header>
+<nav aria-label="Experiments">
+  <a href="#receipts">1. Watch a bitmap</a><a href="#routing">2. Route & average</a><a href="#trials">3. Measure error</a><a href="#probability">4. Distribution</a><a href="#constant">5. Derive φ</a><a href="#extensions">6. Two checkouts</a>
+</nav>
+<main>
+  <div class="note"><strong>Keep three things separate:</strong> ρ = this customer's trailing-zero rank; R = first missing bitmap rank; M = largest observed rank. The paper estimates from <strong>R</strong>. The earlier <code>max_rhos[i] = max(old, rho)</code> code stored <strong>M</strong>.</div>
+
+  <section id="receipts">
+    <div class="number">EXPERIMENT 01 · COUNT · pp. 184–186</div>
+    <h2>One receipt, one mark</h2>
+    <p class="intro">Hash the customer ID, not the receipt. Step through a real-shaped log: 20 receipts, 12 different customer IDs. Or choose the hand-picked tickets to see why a maximum loses the gaps.</p>
+    <div class="controls">
+      <label>Receipt scenario<select id="receiptScenario"><option value="store">Grocery visits: 20 receipts</option><option value="gap">Teaching tickets: a gap & a lucky rank</option><option value="bad">Grocery visits: deliberately even hashes</option></select></label>
+      <label>Trace hash seed<input id="receiptSeed" type="number" min="0" max="999999" value="7"></label>
+      <button id="receiptReset" class="secondary">Reset receipts</button>
+      <label class="check"><input id="reverseBits" type="checkbox">Reverse bitmap display</label>
+    </div>
+    <div class="predict"><strong>Predict:</strong> after ranks {0, 1, 3}, will adding rank 12 fill the missing box 2? Will repeating a customer change anything?</div>
+    <div class="controls"><button id="receiptStep">Next receipt</button><button id="receiptFinish">Process remaining receipts</button><button id="receiptReplay" class="secondary">Replay processed receipts</button></div>
+    <div id="receiptMetrics" class="metrics"></div>
+    <div class="scroll"><div id="receiptBitmap" class="bitmap" aria-label="Bitmap by labelled rank"></div></div>
+    <p class="small">Each cell shows its <strong>rank above its bit</strong>. Amber outline = first missing rank. Blue underline = highest marked rank. Scan increasing rank, even when the drawing is reversed.</p>
+    <pre id="receiptTrace" aria-live="polite"></pre>
+    <div class="scroll"><table><caption>Processed receipts (synthetic customers)</caption><thead><tr><th>Receipt</th><th>Customer</th><th>Checkout</th><th>New ID?</th><th>ρ</th><th>R after</th><th>M after</th></tr></thead><tbody id="receiptRows"></tbody></table></div>
+    <details><summary>The evidence for scan direction</summary><p>p. 185 draws rank 0 on the left. p. 186 defines R=r by requiring all ranks below r to appear and r to be absent. Fig. 1 on p. 197 starts R=0 and increments. Packed binary integers usually draw bit 0 on the right. The physical direction changes; the rank order does not. p. 206 explicitly says the maximum occupied rank has a flatter, less accurate distribution.</p></details>
+  </section>
+
+  <section id="routing">
+    <div class="number">EXPERIMENT 02 · DIRECT AVERAGING → PCSA · pp. 196–197</div>
+    <h2>Many notebooks. One hash per receipt.</h2>
+    <p class="intro">“Stochastic averaging” is stable, random-like partitioning of customers, then ordinary averaging of first-zero ranks. A returning customer always reaches the same virtual notebook, whichever physical checkout they use.</p>
+    <div class="grid">
+      <div><h3>Trace one ticket</h3><div class="controls"><label>Unsigned teaching hash<input id="routeHash" type="number" min="0" max="4294967295" value="40"></label><label>Trace notebooks<select id="routeMaps"><option>4</option><option>16</option><option>64</option></select></label><button id="routeTrace">Split ticket</button></div><pre id="routeOutput"></pre></div>
+      <div><h3>Two different workloads</h3><p><strong>Direct averaging:</strong> m independent observers each see every customer. Estimate = <code>2^mean(R) / φ</code>.</p><p><strong>PCSA:</strong> each notebook sees about n/m customers. Estimate = <code>m × 2^mean(R) / φ</code>.</p><p>Average the ranks <em>before</em> exponentiating. Keep every bitmap gap.</p></div>
+    </div>
+    <h3>The promotion day</h3>
+    <div class="controls">
+      <label>Unique customers<input id="dayN" type="number" min="0" max="10000" value="6400"></label>
+      <label>Repeat receipts<input id="dayRepeats" type="number" min="0" max="20000" value="12800"></label>
+      <label>Notebooks m<select id="dayM"><option>4</option><option>16</option><option selected>64</option><option>256</option></select></label>
+      <label>Rank bitmap bits L<select id="dayL"><option>4</option><option>8</option><option selected>16</option><option>24</option></select></label>
+      <label>Day hash seed<input id="daySeed" type="number" min="0" max="999999" value="7"></label>
+      <button id="dayRun">Process promotion day</button>
+    </div>
+    <div id="dayStatus" class="status" role="status"></div><div id="dayMetrics" class="metrics"></div><div id="dayCaution" class="note" hidden></div>
+    <div class="controls"><label>Inspect notebook<select id="inspectBucket"><option value="0">0</option></select></label><button id="directRun" class="secondary" disabled>Compare direct averaging</button></div>
+    <div class="scroll"><div id="dayBitmap" class="bitmap"></div></div><pre id="dayCalculation">Process a day to inspect the actual buckets and estimator.</pre><pre id="directOutput">Direct averaging requires m hash evaluations per receipt. Run the comparison to measure its readout for this same customer set.</pre>
+    <details><summary>Actual bucket populations and first missing ranks</summary><div class="scroll"><table><thead><tr><th>Bucket</th><th>True unique IDs</th><th>R</th><th>2^R / φ (bucket readout)</th></tr></thead><tbody id="dayBuckets"></tbody></table></div></details>
+    <p class="small">Receipt experiments use a deterministic seeded 32-bit MurmurHash3 teaching hash. Python uses SHA-256 truncated to 64 bits, so hashes and estimates differ. With 256 notebooks, 8 address bits leave 24 rank bits. True counts are displayed for learning, never fed into the estimator.</p>
+  </section>
+
+  <section id="trials">
+    <div class="number">EXPERIMENT 03 · VARIANCE, BIAS & STANDARD ERROR · pp. 195–203</div>
+    <h2>Same customers. Many imaginary hash assignments.</h2>
+    <p class="intro">One answer cannot measure accuracy. Here each trial gives the same n distinct customers a new set of pseudorandom 32-bit tickets. Within a trial each ID has one ticket; repeat receipts would reuse it and add no evidence. This samples the paper's uniform-hash model, rather than running the receipt hash.</p>
+    <div class="controls">
+      <label>Trial customers n<input id="trialN" type="number" min="1" max="20000" value="6400"></label>
+      <label>Trial notebooks m<select id="trialM"><option>4</option><option>16</option><option selected>64</option><option>256</option></select></label>
+      <label>Number of trials<input id="trialCount" type="number" min="20" max="1000" value="300"></label>
+      <label>Random generator seed<input id="trialSeed" type="number" min="0" max="999999" value="42"></label>
+      <button id="trialRun">Run hash trials</button><button id="trialCancel" class="secondary" disabled>Cancel trials</button>
+    </div>
+    <div class="predict">Try m=16, then 64, then 256 with the same n. Four times the notebooks should roughly halve standard error. Then try n=12, m=64: small-population bias breaks this rule of thumb.</div>
+    <div id="trialStatus" class="status" role="status"></div><div id="trialMetrics" class="metrics"></div>
+    <div class="scroll"><table><thead><tr><th>Measurement</th><th>Sample across trials</th><th>Large-load theory / meaning</th></tr></thead><tbody id="trialRows"></tbody></table></div>
+    <h3>Where did PCSA estimates land?</h3><div id="trialHistogram"></div>
+    <p class="small">Sample variance divides by trials−1. Standard error here means SD(estimate)/true n, as in the paper, not SD/√trials. The bias correction rescales estimates by 1/(1+0.31/m); it does not repair the startup regime. No hard ±10% guarantee.</p>
+  </section>
+
+  <section id="probability">
+    <div class="number">EXPERIMENT 04 · THE DISTRIBUTION OF R · pp. 186–191</div>
+    <h2>Where is the first missing rank likely to be?</h2>
+    <p class="intro">This is a distribution over <strong>R after n distinct customers</strong>, not over one customer's ρ. We compute Theorem 1 with inclusion–exclusion, then compare equation (14)'s ψ approximation and sampled frequencies.</p>
+    <div class="controls"><label>Distribution customers n<select id="probN"><option selected>2</option><option>8</option><option>100</option><option>1000</option><option>10000</option></select></label><button id="probRun">Calculate distribution</button><button id="probSample" class="secondary">Sample 1,000 hash trials</button></div>
+    <pre>q[n,k] = P(R ≥ k)       p[n,k] = q[n,k] − q[n,k+1]
+q[n,2] = 1 − (1/2)^n − (3/4)^n + (1/4)^n
+ψ(x) = (1−e^−x)(1−e^−2x)(1−e^−4x)…
+p[n,k] ≈ ψ(n/2^k) − ψ(n/2^(k+1))</pre>
+    <div id="probStatus" class="status" role="status"></div><div id="probMetrics" class="metrics"></div>
+    <div class="scroll"><table><thead><tr><th>Rank k</th><th>Exact q: R≥k</th><th>Exact p: R=k</th><th>ψ approx. p</th><th>Sample p</th><th>Exact probability</th></tr></thead><tbody id="probRows"></tbody></table></div>
+    <details><summary>What happened to Table I in the PDF?</summary><p>The printed table calls the values q, but its bell-shaped entries behave like p. Its displayed ranks and exact/approximate rows also appear inconsistent with the zero-based equations. For n=100 and k=6 the equations give exact p≈0.34757612 and ψ approximation≈0.34529782. This lab recomputes the equations rather than copying the table. Exact here means the exact formula evaluated with finite-precision arithmetic; very small tails can suffer cancellation.</p></details>
+    <details><summary>Work the two-customer variance by hand</summary><p>R=0,1,2 has probabilities 1/4,1/2,1/4. Mean=1. Squared distances from 1 are 1,0,1. Their weighted average is 0.5: the variance. SD=√0.5≈0.7071 ranks. For large n, SD(R) is about 1.12127 ranks, not 1.12127 customers.</p></details>
+  </section>
+
+  <section id="constant">
+    <div class="number">EXPERIMENT 05 · THEOREM 3.A · pp. 193–195</div>
+    <h2>The “magic” constant is a computable product.</h2>
+    <p class="intro">The probability analysis finds E[R]≈log₂n−0.3704964. φ converts this systematic rank offset into a scale correction. It is derived from the model, not fitted to our store.</p>
+    <pre>φ = e^γ / √2 × (2/3) × ∏ [((4j+1)(4j+2)) / ((4j)(4j+3))]^((-1)^popcount(j))
+γ = 0.5772156649015329     j = 1, 2, 3, …
+Even popcount: multiply. Odd popcount: divide.</pre>
+    <div class="controls"><label>Product terms<input id="phiTerms" type="number" min="1" max="100000" value="1000"></label><button id="phiRun">Evaluate product</button></div>
+    <div id="phiMetrics" class="metrics"></div><div id="phiRows"></div>
+    <div class="grid"><div><h3>The derivation bridge</h3><p>Exact distribution → expected rank → Mellin transform over powers-of-two scales → constant offset <code>(γ+N′(0))/ln(2)−1/2</code> → <code>ln φ = γ+N′(0)−ln(2)/2</code> → this product. See lesson §8 for the intermediate expressions.</p></div><div><h3>Average before exponentiating</h3><p>Two notebook readings: R=2 and R=4.</p><pre>2^average(2,4) = 8
+average(2^2,2^4) = 10</pre><p>Calibrating E[R] does not make 2^R/φ unbiased. PCSA's residual bias ratio is roughly <code>1+0.31/m</code>.</p></div></div>
+    <details><summary>The tiny periodic effect and the appendix</summary><p>Doubling n moves the binary ruler about one whole rank. A tiny ripple repeats in the fractional part of log₂n. Theorem 3.A bounds its amplitude by 10⁻⁵ rank units; the appendix controls Fourier coefficients using the Gamma function and N(s). This is distinct from ordinary trial-to-trial noise. The product uses the Thue–Morse sign sequence, discussed in the note added in proof.</p></details>
+  </section>
+
+  <section id="extensions">
+    <div class="number">EXPERIMENT 06 · MERGING, DELETIONS & SCROLLING · pp. 204–205</div>
+    <h2>Two checkouts, the same store</h2>
+    <p class="intro">The 20-receipt log includes customers who use both checkouts. OR corresponding bitmap cells to form the union. The result must match processing all receipts centrally, bit for bit.</p>
+    <div class="controls"><button id="mergeRun">Merge checkout A and B</button></div><pre id="mergeOutput">Same hash + seed + m + width on both checkouts.</pre>
+    <div class="grid">
+      <div><h3>Delete one receipt safely</h3><p>Two customers share rank 0. Track active receipt occurrences. A bit remains 1 while at least one contributing receipt remains.</p><div class="controls"><button id="deleteAddA">Add A receipt</button><button id="deleteAddB">Add B receipt</button><button id="deleteRemoveA" class="secondary">Remove A receipt</button><button id="deleteRemoveB" class="secondary">Remove B receipt</button><button id="deleteReset" class="secondary">Reset counters</button></div><pre id="deleteOutput" aria-live="polite"></pre></div>
+      <div><h3>Reconstruct the paper's fringe</h3><p>All rows begin with four ones, followed by a mixed fringe and trailing zeros. Store a boundary and the fringe instead.</p><button id="scrollRun">Reconstruct scrolling example</button><pre id="scrollOutput">Boundary = 4
+Fringe rows = 10100, 11000, 01011, 11010</pre><p class="small">This example is exactly reconstructible because its omitted cells are known. A fixed-width scrolling implementation needs a policy for rare out-of-window bits. Scrolling ranks is not expiring old receipts.</p></div>
+    </div>
+  </section>
+  <section>
+    <h2>What to remember</h2>
+    <p><strong>Bitmap → first missing rank → average ranks → exponentiate → calibrate.</strong> PCSA adds stable hash partitioning and a factor of m.</p>
+    <p>Small n/m, biased hashes, finite bitmap widths, hash collisions, incompatible merges and basic-bit deletions are real limitations. These experiments expose several of them. The <a href="07-fm-pcsa-story.md#11-limitations-and-implementation-traps">full lesson</a> covers the limits, proof outline, all five theorems, empirical tables and remaining paper details.</p>
+  </section>
+</main>
+<footer>Offline, no dependencies or network calls. Synthetic customer data. Source pages use the journal's printed page numbers.</footer>
+<script src="fm-pcsa-playground.js"></script>
+</body>
+</html>
